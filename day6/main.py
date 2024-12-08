@@ -1,204 +1,83 @@
-from collections import defaultdict, Counter
 
+def get_starting_position(lines):
+    for row, line in enumerate(lines):
+        if (col := line.find('^')) != -1:
+            return row, col
+        
+def part1(fn: str):
+    # time part 1
+    import time
+    start_time = time.time()
 
-def check_can_reach(r, c, r_, c_, lines):
-    if r == r_:
-        if c < c_:
-            for i in range(c, c_):
-                if lines[r][i] == '#':
-                    return False
-        else:
-            for i in range(c_, c):
-                if lines[r][i] == '#':
-                    return False
-    else:
-        if r < r_:
-            for i in range(r, r_):
-                if lines[i][c] == '#':
-                    return False
-        else:
-            for i in range(r_, r):
-                if lines[i][c] == '#':
-                    return False
-    return True
+    lines = [line.strip() for line in open(fn)]
+    row, col = get_starting_position(lines)
+    lines = [list(line) for line in lines]
     
+    moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+    dir = 0
+    good_spots = {(row, col)}
+    
+    while True:
+        next_row = row + moves[dir][0]
+        next_col = col + moves[dir][1]
+        
+        if not (0 <= next_row < len(lines) and 0 <= next_col < len(lines[0])):
+            break
+            
+        if lines[next_row][next_col] != '#':
+            row, col = next_row, next_col
+            good_spots.add((row, col))
+            lines[row][col] = 'X'
+        else:
+            dir = (dir + 1) % 4
+    print(f"Time taken: {time.time() - start_time}")
+    return len(good_spots)
+
+def part2(fn: str):
+    lines = [line.strip() for line in open(fn)]
+    start_row, start_col = get_starting_position(lines)
+    moves = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+    # Brute goddamn force you son of a bitch
+    total = 0
+    total_iterations = len(lines) * len(lines[0])
+    from tqdm import tqdm
+    with tqdm(total=total_iterations, desc="Processing positions") as pbar:
+        for r in range(len(lines)):
+            for c in range(len(lines[0])):
+                new_lines = [list(line) for line in lines]
+                if new_lines[r][c] == '#': continue # already blocked, no need bro
+                new_lines[r][c] = '#'
+
+                dir = 0
+                orientations = [[-1] * len(lines[0]) for _ in range(len(lines))]
+                orientations[start_row][start_col] = 0
+                row, col = start_row, start_col
+
+                while True:
+                    next_row = row + moves[dir][0]
+                    next_col = col + moves[dir][1]
+
+                    if not (0 <= next_row < len(lines) and 0 <= next_col < len(lines[0])):
+                        break
+
+                    if orientations[next_row][next_col] == dir: # created a loop
+                        total += 1
+                        break
+
+                    if new_lines[next_row][next_col] != '#':
+                        row, col = next_row, next_col
+                        orientations[row][col] = dir
+                    else:
+                        dir = (dir + 1) % 4
+                    # orientations[row][col] = dir
+
+                pbar.update(1)
+                
+    return total
+
+
 
 if __name__ == '__main__':
-    lines = [line.strip() for line in open("input.txt")]
-
-
-    # search for guard
-    row = 0
-    for r, line in enumerate(lines):
-        col = line.find('^')
-
-        if col != -1:
-            row = r
-            break
-
-    print(f"guard at {row}, {col}")
-
-    starting_row = row
-    starting_col = col
-
-    # set direction up
-    direction = (-1, 0)
-
-    count = 1
-    while 0 <= row < len(lines) and 0 <= col < len(lines[row]):
-        # print(f"guard at {row}, {col}, pointing {direction}")
-        if direction == (-1, 0):
-            # if leaving the grid, break
-            if row + direction[0] < 0:
-                break
-            if lines[row + direction[0]][col + direction[1]] != '#':
-                if lines[row + direction[0]][col + direction[1]] != 'X':
-                    count += 1
-                lines[row] = lines[row][:col] + 'X' + lines[row][col + 1:]
-                row += direction[0]
-            elif lines[row + direction[0]][col + direction[1]] == '#':
-                direction = (0, 1)
-                # print(f"changing direction, count is {count}")
-        elif direction == (0, 1):
-            # if leaving the grid, break
-            if col + direction[1] >= len(lines[row]):
-                break
-            if lines[row + direction[0]][col + direction[1]] != '#':
-                if lines[row + direction[0]][col + direction[1]] != 'X':
-                    count += 1
-                lines[row] = lines[row][:col] + 'X' + lines[row][col + 1:]
-                col += direction[1]
-            elif lines[row + direction[0]][col + direction[1]] == '#':
-                direction = (1, 0)
-                # print(f"changing direction, count is {count}")
-        elif direction == (1, 0):
-            # if leaving the grid, break
-            if row + direction[0] >= len(lines):
-                break
-            if lines[row + direction[0]][col + direction[1]] != '#':
-                if lines[row + direction[0]][col + direction[1]] != 'X':
-                    count += 1
-                lines[row] = lines[row][:col] + 'X' + lines[row][col + 1:]
-                row += direction[0]
-            elif lines[row + direction[0]][col + direction[1]] == '#':
-                direction = (0, -1)
-                # print(f"changing direction, count is {count}")
-        elif direction == (0, -1):
-            # if leaving the grid, break
-            if col + direction[1] < 0:
-                break
-            if lines[row + direction[0]][col + direction[1]] != '#':
-                if lines[row + direction[0]][col + direction[1]] != 'X':
-                    count += 1
-                lines[row] = lines[row][:col] + 'X' + lines[row][col + 1:]
-                col += direction[1]
-            elif lines[row + direction[0]][col + direction[1]] == '#':
-                direction = (-1, 0)
-                # print(f"changing direction, count is {count}")
-        
-
-    print(count)
-    print()
-    print()
-
-
-    lines = [line.strip() for line in open("input.txt")]
-    row = starting_row
-    col = starting_col
-
-    # up = defaultdict(int)
-    # down = defaultdict(lambda: float('inf'))
-    # left = defaultdict(int)
-    # right = defaultdict(lambda: float('inf'))
-    up = {}
-    down = {}
-    left = {}
-    right = {}
-
-    up[starting_col] = starting_row
-
-
-    direction = (-1, 0)
-
-    num_obstacles = 0
-    lines[starting_row] = lines[starting_row][:starting_col] + 'X' + lines[starting_row][starting_col + 1:]
     
-    while 0 <= row < len(lines) and 0 <= col < len(lines[row]):
-        # print(f"guard at {row}, {col}, pointing {direction}, num_obstacles {num_obstacles}")
-        if direction == (-1, 0):
-            if row + direction[0] < 0:
-                break
-            if lines[row + direction[0]][col + direction[1]] != '#':
-                if row in right:# and right[row] >= col:
-                    # print(f'potential loop')
-                    if check_can_reach(row, col, row, right[row], lines):
-                        num_obstacles += 1
-
-                lines[row] = lines[row][:col] + 'X' + lines[row][col + 1:]
-                row += direction[0]
-            elif lines[row + direction[0]][col + direction[1]] == '#':
-                direction = (0, 1)
-                if row not in right:
-                    right[row] = col
-                right[row] = min(right[row], col)
-
-
-        elif direction == (0, 1):
-            if col + direction[1] >= len(lines[row]):
-                break
-            if lines[row + direction[0]][col + direction[1]] != '#':
-                if col in down:# and down[col] >= row:
-                    # print(f'potential loop')
-                    if check_can_reach(row, col, down[col], col, lines):
-                        num_obstacles += 1
-
-                lines[row] = lines[row][:col] + 'X' + lines[row][col + 1:]
-                col += direction[1]
-            elif lines[row + direction[0]][col + direction[1]] == '#':
-                direction = (1, 0)
-                if col not in down:
-                    down[col] = row
-                down[col] = min(down[col], row)
-
-
-        elif direction == (1, 0):
-            if row + direction[0] >= len(lines):
-                break
-            if lines[row + direction[0]][col + direction[1]] != '#':
-                if row in left:# and left[row] <= col:
-                    # print(f'potential loop')
-                    if check_can_reach(row, col, row, left[row], lines):
-                        num_obstacles += 1
-
-                lines[row] = lines[row][:col] + 'X' + lines[row][col + 1:]
-                row += direction[0]
-            elif lines[row + direction[0]][col + direction[1]] == '#':
-                direction = (0, -1)
-                if row not in left:
-                    left[row] = col
-                left[row] = max(left[row], col)
-
-
-        elif direction == (0, -1):
-            if col + direction[1] < 0:
-                break
-            if lines[row + direction[0]][col + direction[1]] != '#':
-                if col in up:# and up[col] <= row:
-                    # print(f'potential loop')
-                    if check_can_reach(row, col, up[col], col, lines):
-                        num_obstacles += 1
-
-                lines[row] = lines[row][:col] + 'X' + lines[row][col + 1:]
-                col += direction[1]
-            elif lines[row + direction[0]][col + direction[1]] == '#':
-                direction = (-1, 0)
-                if col not in up:
-                    up[col] = row
-                up[col] = max(up[col], row)
-
-    print(up)
-    print(down)
-    print(left)
-    print(right)
-    print(num_obstacles)
-
+    print(part1("input.txt"))
+    print(part2("input.txt"))
