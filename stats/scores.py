@@ -14,3 +14,14 @@ if __name__ == '__main__':
     with open(fn, 'w') as f:
         for score in scores:
             f.write(f'{score}\n')
+
+    # make a histogram of the scores
+    import matplotlib.pyplot as plt
+
+    # make a collage of 4 by 4 figures with varying number of bins
+    fig, axs = plt.subplots(4, 4)
+    for i in range(4):
+        for j in range(4):
+            axs[i, j].hist(scores, bins=5*(i+1)+j)
+
+    plt.show()
